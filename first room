@@ -1,0 +1,98 @@
+
+#include <QApplication>
+#include <QGraphicsView>
+#include <QGraphicsScene>
+#include <QGraphicsRectItem>
+#include <QBrush>
+#include <QColor>
+#include <vector>
+
+class MatrixBasedCircularArenaRoom : public QGraphicsView {
+public:
+    MatrixBasedCircularArenaRoom(QWidget* parent = nullptr) : QGraphicsView(parent) {
+        scene = new QGraphicsScene(this);
+        setScene(scene);
+        setRenderHint(QPainter::Antialiasing);
+        setResizeAnchor(QGraphicsView::AnchorViewCenter);
+        createArenaLayout();
+    }
+
+private:
+    QGraphicsScene* scene;
+    const int tileSize = 20;
+
+    // Define the expanded arena layout
+    // 0 = Wall, 1 = Arena Floor, 2 = Obstacle, 3 = Entrance, 4 = Hallway, 5 = Exit
+    const std::vector<std::vector<int>> layout = {
+            {0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0},
+            {0, 0, 0, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0},
+            {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0},
+            {0, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 0, 0, 0},
+            {0, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0, 0},
+            {0, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 0, 0},
+            {0, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 0, 0},
+            {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+            {0, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+            {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+            {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0},
+            {0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 1, 1, 1, 4, 3, 3, 4, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    };
+
+    void createArenaLayout() {
+        for (int row = 0; row < layout.size(); ++row) {
+            for (int col = 0; col < layout[row].size(); ++col) {
+                int tileType = layout[row][col];
+                QColor color = getColorForTile(tileType);
+                drawTile(row, col, color);
+            }
+        }
+    }
+
+    // Helper function to get color based on tile type
+    QColor getColorForTile(int tileType) const {
+        switch (tileType) {
+            case 0: return QColor(30, 30, 30);   // Wall
+            case 1: return QColor(80, 80, 80);   // Arena Floor
+            case 2: return QColor(0, 0, 0);      // Obstacle
+            case 3: return QColor(0, 255, 0);    // Entrance
+            case 4: return QColor(90, 90, 90);   // Hallway
+            case 5: return QColor(255, 0, 0);    // Exit
+            default: return QColor(0, 0, 0);     // Default to black for unknown types
+        }
+    }
+
+    // Draws a tile at a specified grid position with the given color
+    void drawTile(int row, int col, QColor color) {
+        QGraphicsRectItem* tile = new QGraphicsRectItem(col * tileSize, row * tileSize, tileSize, tileSize);
+        tile->setBrush(QBrush(color));
+        tile->setPen(QPen(Qt::NoPen));
+        scene->addItem(tile);
+    }
+
+protected:
+    // Override resizeEvent to scale the view to fit the window
+    void resizeEvent(QResizeEvent* event) override {
+        fitInView(scene->sceneRect(), Qt::KeepAspectRatio);
+        QGraphicsView::resizeEvent(event);
+    }
+};
+
+int main(int argc, char *argv[]) {
+    QApplication app(argc, argv);
+
+    MatrixBasedCircularArenaRoom arena;
+    arena.setWindowTitle("Matrix-Based Circular Arena Room with Balanced Obstacles");
+    arena.resize(800, 800); //window
+    arena.show();
+
+    return app.exec();
+
+}
+
+#include "main.moc"
+
+
