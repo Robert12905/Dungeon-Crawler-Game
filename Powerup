@@ -1,0 +1,145 @@
+#include <QApplication>
+#include <QGraphicsView>
+#include <QGraphicsScene>
+#include <QGraphicsItem>
+#include <QPainter>
+#include <QBrush>
+#include <QTimer>
+#include <QDebug>
+
+class Hero;
+
+// PowerUp Class Definition
+class PowerUp : public QGraphicsItem {
+public:
+    PowerUp();
+    QRectF boundingRect() const override;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+
+    // Method to check for collision with hero and heal if collided
+    void checkAndHealHero(QGraphicsItem *hero);
+
+private:
+    QRectF m_powerUpArea;  // The bounding area of the powerup
+};
+
+// Hero Class Definition
+class Hero : public QGraphicsItem {
+public:
+    Hero();  // Constructor
+    QRectF boundingRect() const override;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+    void heal(int amount);  // Heal the hero
+
+private:
+    int m_health;  // Hero's health
+};
+
+// PowerUp Implementation
+PowerUp::PowerUp() {
+    m_powerUpArea = QRectF(0, 0, 30, 30);  // Powerup size (30x30)
+}
+
+QRectF PowerUp::boundingRect() const {
+    return m_powerUpArea;
+}
+
+void PowerUp::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
+    QBrush brush(Qt::green);  // Color of the power-up
+    painter->setBrush(brush);
+    painter->drawRect(m_powerUpArea);  // Draw the powerup
+}
+
+void PowerUp::checkAndHealHero(QGraphicsItem *hero) {
+    // Check if the hero collides with the powerup
+    if (this->collidesWithItem(hero)) {
+        qDebug() << "Powerup collected! Healing hero.";
+
+        // Cast to Hero class if the item is a Hero
+        Hero *heroItem = dynamic_cast<Hero*>(hero);
+        if (heroItem) {
+            heroItem->heal(10);  // Heal by 10 units
+        }
+
+        // Hide the powerup after it is collected
+        this->setVisible(false);
+    }
+}
+
+// Hero Implementation
+Hero::Hero() : m_health(100) {}  // Start with 100 health
+
+QRectF Hero::boundingRect() const {
+    return QRectF(0, 0, 50, 50);  // Hero's size (50x50)
+}
+
+void Hero::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
+    QBrush brush(Qt::blue);  // Hero color (blue for the hero)
+    painter->setBrush(brush);
+    painter->drawRect(0, 0, 50, 50);  // Draw the hero as a rectangle
+}
+
+void Hero::heal(int amount) {
+    m_health += amount;  // Heal the hero
+    if (m_health > 100) m_health = 100;  // Cap health at 100
+    qDebug() << "Hero's health is now: " << m_health;
+}
+
+// GameScene Class Definition
+class GameScene : public QGraphicsScene {
+public:
+    GameScene();  // Constructor
+    void advance();  // Game loop update function
+
+private:
+    Hero *hero;      // Pointer to hero
+    PowerUp *powerUp;  // Pointer to powerup
+};
+
+// GameScene Implementation
+GameScene::GameScene() {
+    // Create hero and powerup objects
+    hero = new Hero();
+    powerUp = new PowerUp();
+
+    // Add them to the scene
+    addItem(hero);
+    addItem(powerUp);
+
+    // Set the hero's initial position
+    hero->setPos(100, 100);
+    powerUp->setPos(150, 150);
+}
+
+void GameScene::advance() {
+    // Check if the powerup collides with the hero and heal the hero if so
+    powerUp->checkAndHealHero(hero);
+
+
+}
+
+
+int main(int argc, char *argv[]) {
+    QApplication a(argc, argv);
+
+    // Create the game scene
+    GameScene scene;
+
+    // Create the view
+    QGraphicsView view(&scene);
+
+    // Set the view size and show it
+    view.setRenderHint(QPainter::Antialiasing);
+    view.setRenderHint(QPainter::SmoothPixmapTransform);
+    view.resize(800, 600);  // Set window size
+    view.show();
+
+    // Game loop update
+    QTimer timer;
+    QObject::connect(&timer, &QTimer::timeout, [&scene]() {
+        scene.advance();  // Update the scene (check for collisions, etc.)
+    });
+    timer.start(16);  // Call every ~16ms for ~60FPS
+
+    return a.exec();
+}
