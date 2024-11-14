@@ -1,0 +1,133 @@
+#include <QApplication>
+#include <QGraphicsView>
+#include <QGraphicsScene>
+#include <QGraphicsItem>
+#include <QPainter>
+#include <QBrush>
+#include <QTimer>
+#include <QDebug>
+
+// Hero Class Definition
+class Hero : public QGraphicsItem {
+public:
+    Hero();  // Constructor
+    QRectF boundingRect() const override;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+    void takeDamage(int amount);  // Hero takes damage
+    int getHealth() const { return m_health; }  // Getter for hero's health
+
+private:
+    int m_health;  // Hero's health
+};
+
+// Enemy Class Definition
+class Enemy : public QGraphicsItem {
+public:
+    Enemy(Hero *hero);  // Constructor that takes a pointer to the hero
+    QRectF boundingRect() const override;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+    void attack();  // Function to attack the hero
+
+private:
+    Hero *m_hero;  // Pointer to the hero
+    int m_health;   // Enemy's health
+};
+
+// Hero Implementation
+Hero::Hero() : m_health(100) {}  // Start with 100 health
+
+QRectF Hero::boundingRect() const {
+    return QRectF(0, 0, 50, 50);  // Hero's size (50x50)
+}
+
+void Hero::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
+    QBrush brush(Qt::blue);  // Hero color (blue for the hero)
+    painter->setBrush(brush);
+    painter->drawRect(0, 0, 50, 50);  // Draw the hero as a rectangle
+}
+
+void Hero::takeDamage(int amount) {
+    m_health -= amount;  // Decrease hero's health
+    if (m_health < 0) m_health = 0;  // Prevent health from going below 0
+    qDebug() << "Hero's health is now: " << m_health;
+}
+
+// Enemy Implementation
+Enemy::Enemy(Hero *hero) : m_hero(hero) {
+    m_health = static_cast<int>(hero->getHealth() * 0.4);  // Set enemys health
+}
+
+QRectF Enemy::boundingRect() const {
+    return QRectF(0, 0, 50, 50);  // Enemy size (50x50)
+}
+
+void Enemy::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
+    QBrush brush(Qt::red);  // Enemy color (red for the enemy)
+    painter->setBrush(brush);
+    painter->drawRect(0, 0, 50, 50);  // Draw the enemy as a rectangle
+}
+
+void Enemy::attack() {
+    if (m_hero) {
+        int attackDamage = 20;
+        qDebug() << "Enemy attacks! Hero takes " << attackDamage << " damage.";
+        m_hero->takeDamage(attackDamage);  // Apply damage to the hero
+    }
+}
+
+// GameScene Class Definition
+class GameScene : public QGraphicsScene {
+public:
+    GameScene();  // Constructor
+    void advance();  // Game loop update function
+
+private:
+    Hero *hero;      // Pointer to hero
+    Enemy *enemy;      // Pointer to enemy
+};
+
+// GameScene Implementation
+GameScene::GameScene() {
+    // Create hero and enemy objects
+    hero = new Hero();
+    enemy = new Enemy(hero);  // Pass the hero pointer to the enemy
+
+    // Add them to the scene
+    addItem(hero);
+    addItem(enemy);
+
+    // Set the initial positions of the hero and enemy
+    hero->setPos(100, 100);  // Hero at position (100, 100)
+    enemy->setPos(300, 300);  // Enemy at position (300, 300)
+}
+
+void GameScene::advance() {
+    // Have the enemy attack the hero every frame
+    enemy->attack();
+}
+
+
+int main(int argc, char *argv[]) {
+    QApplication a(argc, argv);
+
+    // Create the game scene
+    GameScene scene;
+
+    // Create the view
+    QGraphicsView view(&scene);
+
+    // Set the view size and show it
+    view.setRenderHint(QPainter::Antialiasing);
+    view.setRenderHint(QPainter::SmoothPixmapTransform);
+    view.resize(800, 600);  // Set window size
+    view.show();
+
+    // Game loop update )
+    QTimer timer;
+    QObject::connect(&timer, &QTimer::timeout, [&scene]() {
+        scene.advance();  // Update the scene
+    });
+    timer.start(16);  // Call every ~16ms for ~60FPS
+
+    return a.exec();
+}
